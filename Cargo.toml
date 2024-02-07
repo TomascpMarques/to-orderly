@@ -5,4 +5,24 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [".", "crates/libs/lib-templates", "crates/services/web", "entity", "migration"]
+
+
 [dependencies]
+web = { path = "./crates/services/web" }
+entity = { path = "entity" }
+migration = { path = "migration" }
+
+sea-orm = { version = "0.12", features = [
+  "runtime-tokio-rustls", # `ASYNC_RUNTIME` feature
+  "sqlx-postgres",
+] }
+tokio = { version = "1.35.1", features = ["full"] }
+anyhow.workspace = true
+
+[workspace.dependencies]
+anyhow = "1.0.79"
+thiserror = "1.0.56"
+typed-builder = "0.18.1"
+serde = { version = "1.0.196", features = ["derive"] }
