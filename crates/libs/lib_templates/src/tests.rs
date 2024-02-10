@@ -1,7 +1,7 @@
 use sea_query::PostgresQueryBuilder;
 use serde_json::json;
 
-use crate::{Field, Schema, Type};
+use crate::{Field, LiveSchema, Schema, Type};
 
 #[test]
 fn cant_serialize_repeated_fields() {
@@ -66,7 +66,7 @@ fn build_sql() {
         .to_lowercase();
 
     let table = vec![
-        r#"create table if not exists "test_t" ("#,
+        r#"create table "test_t" ("#,
         r#""temperature" integer null,"#,
         r#""id" serial not null primary key"#,
         r#")"#,
@@ -74,4 +74,21 @@ fn build_sql() {
     .join(" ");
 
     assert_eq!(sql, table)
+}
+
+#[test]
+fn parse_live_schema() {
+    let json = json!({
+        "temperature": 23.2,
+    });
+
+    let mut want = LiveSchema::default();
+    want.0.get_mut(0).unwrap().replace(Field {
+        name: "temperature".into(),
+        field_type: Type::Float,
+        nullable: false,
+    });
+
+    let have: LiveSchema = serde_json::from_value(json).unwrap();
+    assert!(have.0.get(0).unwrap().eq(have.0.get(0).unwrap()))
 }

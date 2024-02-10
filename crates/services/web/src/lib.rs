@@ -24,10 +24,12 @@ mod api {
         routing::{get, post},
         Json, RequestPartsExt, Router,
     };
+
+    use lib_templates::{iden_str, IdenString, LiveSchema, Schema};
     use sea_orm::{
-        sea_query::{PostgresQueryBuilder, SchemaStatementBuilder},
-        ColumnTrait, ConnectionTrait, Database, DatabaseConnection, EntityTrait, QueryFilter,
-        Statement,
+        sea_query::{PostgresQueryBuilder, Table},
+        ActiveModelTrait, ColumnTrait, ConnectionTrait, Database, DatabaseConnection, EntityTrait,
+        QueryFilter, Statement,
     };
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -49,10 +51,13 @@ mod api {
             connection: Arc::new(conn),
         };
 
-        Ok(Router::new()
-            .route("/templates", get(query_template))
-            .route("/templates/:template", post(new_template))
-            .with_state(state))
+        let templates = Router::new()
+            .route("/", get(query_template))
+            .route("/live/:template", post(new_template_live))
+            .route("/:template", post(new_template).delete(drop_template))
+            .with_state(state);
+
+        Ok(Router::new().nest("/templates", templates))
     }
 
     // Start Region --- Query Templates
@@ -106,6 +111,10 @@ mod api {
         InternalServerError,
         #[error("The given template schema is ill formed")]
         BadTemplateSchema,
+        #[error("Could not drop the table: {0}")]
+        CouldNotDropTable(String),
+        #[error("Could not create a template")]
+        TemplateAlreadyExists,
     }
 
     impl IntoResponse for TemplateCrudError {
@@ -125,13 +134,19 @@ mod api {
                 TemplateCrudError::InternalServerError => {
                     (StatusCode::INTERNAL_SERVER_ERROR, "".into())
                 }
+                TemplateCrudError::CouldNotDropTable(t) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to drop table: {t}"),
+                ),
+                TemplateCrudError::TemplateAlreadyExists => {
+                    (StatusCode::BAD_REQUEST, format!("Table exists"))
+                }
             }
             .into_response()
         }
     }
 
     #[axum::debug_handler]
-    /// Performs Read operations on the templates (searches)
     async fn query_template(
         query: TemplateQuerie,
         State(db): State<DataBaseState>,
@@ -176,6 +191,7 @@ mod api {
                 let json = serde_json::to_value(template).unwrap();
                 Ok(Json(json))
             }
+
             TQ::ByNameLoose { name } => {
                 let template: Vec<TemplateModel> = Template::find()
                     .filter(template::Column::Name.like(format!("%{name}%")))
@@ -189,22 +205,91 @@ mod api {
         }
     }
 
-    // --- Update, Delete & Insert ---
+    // --- Create new templates ---
+
+    #[axum::debug_handler]
+    async fn drop_template(
+        State(db): State<DataBaseState>,
+        Path(template): Path<String>,
+    ) -> Result<Json<serde_json::Value>, TemplateCrudError> {
+        let connection = db.connection.clone();
+
+        let drop_table = Table::drop()
+            .table(iden_str!(template.clone()))
+            .to_string(PostgresQueryBuilder);
+
+        let res = connection
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Postgres,
+                drop_table,
+            ))
+            .await;
+
+        match res {
+            Ok(_) => Ok(json!({}).into()),
+            Err(e) => {
+                dbg!(e);
+                Err(TemplateCrudError::CouldNotDropTable(template))
+            }
+        }
+    }
+
+    #[axum::debug_handler]
+    async fn new_template_live(
+        State(db): State<DataBaseState>,
+        Path(template): Path<String>,
+        Json(record): Json<LiveSchema>,
+    ) -> Result<Json<serde_json::Value>, TemplateCrudError> {
+        todo!()
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct NewTemplate {
+        meta: NewTemplateMeta,
+        schema: Schema,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct NewTemplateMeta {
+        name: String,
+        description: String,
+        available: Option<bool>,
+    }
 
     #[axum::debug_handler]
     async fn new_template(
         State(db): State<DataBaseState>,
         Path(template): Path<String>,
-        Json(payload): Json<serde_json::Value>,
+        Json(payload): Json<NewTemplate>,
     ) -> Result<Json<serde_json::Value>, TemplateCrudError> {
+        use sea_orm::ActiveValue::Set;
+
         let connection = db.connection.clone();
 
-        let template_schema: lib_templates::Schema =
-            serde_json::from_value(payload).map_err(|_| TemplateCrudError::BadTemplateSchema)?;
+        let meta: NewTemplateMeta = payload.meta;
+        let template_schema: Schema = payload.schema;
 
         let schema = template_schema
             .table_create_statement(template.as_str())
             .to_string(PostgresQueryBuilder);
+
+        let template_meta = template::ActiveModel {
+            name: Set(meta.name),
+            description: Set(meta.description),
+            available: Set(meta.available),
+            ..Default::default()
+        };
+
+        let res = template_meta.insert(&*connection).await;
+        res.map_err(|e| match e.sql_err().unwrap() {
+            sea_orm::SqlErr::UniqueConstraintViolation(_) => {
+                TemplateCrudError::TemplateAlreadyExists
+            }
+            sea_orm::SqlErr::ForeignKeyConstraintViolation(_) => {
+                TemplateCrudError::TemplateAlreadyExists
+            }
+            _ => TemplateCrudError::InternalServerError,
+        })?;
 
         let res = connection
             .query_one(Statement::from_string(

@@ -1,28 +1,28 @@
 [package]
-name = "web"
-version = "0.1.0"
-edition = "2021"
+  name = "web"
+  version = "0.1.0"
+  edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+  # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sea-orm = { version = "0.12", features = [
-  "sqlx-postgres",
-  "runtime-tokio-rustls",
-] }
-anyhow = "1.0.79"
-axum = { version = "0.7.4", features = ["macros"] }
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.113"
-tokio = { version = "1.35.1", features = ["full"] }
-tower = "0.4.13"
-tower-cookies = { version = "0.10.0", features = ["private", "signed"] }
-rustls = "0.22.2"
+  sea-orm = { version = "0.12", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+  ] }
+  anyhow = "1.0.79"
+  axum = { version = "0.7.4", features = ["macros"] }
+  serde = { version = "1.0.196", features = ["derive"] }
+  serde_json = "1.0.113"
+  tokio = { version = "1.35.1", features = ["full"] }
+  tower = "0.4.13"
+  tower-cookies = { version = "0.10.0", features = ["private", "signed"] }
+  rustls = "0.22.2"
 
-entity = { path = "../../../entity" }
-lib-templates = { path = "../../libs/lib-templates" }
+  entity = { workspace = true }
+  lib_templates = { workspace = true }
 
-typed-builder = { workspace = true }
-thiserror = { workspace = true }
-serde_with = "3.6.0"
-tower-http = "0.5.1"
+  typed-builder = { workspace = true }
+  thiserror = { workspace = true }
+  serde_with = "3.6.0"
+  tower-http = "0.5.1"

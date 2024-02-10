@@ -6,10 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = [".", "crates/libs/lib-templates", "crates/services/web", "entity", "migration"]
+members = [
+  ".",
+  "crates/libs/lib_templates",
+  "crates/services/web",
+  "entity",
+  "migration",
+]
 
 
 [dependencies]
+lib_templates = { path = "./crates/libs/lib_templates" }
 web = { path = "./crates/services/web" }
 entity = { path = "entity" }
 migration = { path = "migration" }
@@ -22,6 +29,11 @@ tokio = { version = "1.35.1", features = ["full"] }
 anyhow.workspace = true
 
 [workspace.dependencies]
+lib_templates = { path = "./crates/libs/lib_templates" }
+web = { path = "./crates/services/web" }
+entity = { path = "entity" }
+migration = { path = "migration" }
+
 anyhow = "1.0.79"
 thiserror = "1.0.56"
 typed-builder = "0.18.1"

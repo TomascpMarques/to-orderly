@@ -1490,6 +1490,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "entity",
+ "lib_templates",
  "migration",
  "sea-orm",
  "tokio",
@@ -1539,7 +1540,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib-templates"
+name = "lib_templates"
 version = "0.1.0"
 dependencies = [
  "getset",
@@ -3515,7 +3516,7 @@ dependencies = [
  "anyhow",
  "axum",
  "entity",
- "lib-templates",
+ "lib_templates",
  "rustls 0.22.2",
  "sea-orm",
  "serde",

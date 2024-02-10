@@ -19,7 +19,12 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Template::Name).string().not_null())
+                    .col(
+                        ColumnDef::new(Template::Name)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(ColumnDef::new(Template::Description).string().not_null())
                     .col(ColumnDef::new(Template::Available).boolean().default(true))
                     .to_owned(),

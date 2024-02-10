@@ -1,5 +1,5 @@
 [package]
-name = "lib-templates"
+name = "lib_templates"
 version = "0.1.0"
 edition = "2021"
 
